@@ -39,6 +39,7 @@ contract FestivalTicketMarketPlace is Ownable {
         ticketName = _ticketName;
         ticketSymbol = _ticketSymbol;
         contractOwner = msg.sender;
+        festivalCurrencyTicket.setTokenAllowance(address(this));
     } 
 
     
@@ -66,7 +67,7 @@ contract FestivalTicketMarketPlace is Ownable {
 
     /* Modifiers */
     modifier onlyTicketOwner(uint256 _ticketId) {
-        require(festivalTicketNFT.ownerOf(_ticketId) == msg.sender, "You are not the owner of this ticket");
+        if (festivalTicketNFT.ownerOf(_ticketId) != msg.sender) revert FestivalTicketMarketPlace__NotTicketNFTOwner(_ticketId);
         _;
     }
 
@@ -80,6 +81,8 @@ contract FestivalTicketMarketPlace is Ownable {
         uint256 oldPrice = ticketPriceByTicketId[_ticketId];
         uint256 tenPercentOfOldPrice = oldPrice / 10;
         uint256 maxPrice = oldPrice + tenPercentOfOldPrice;
+        console.log("oldPrice: %s", oldPrice);
+        console.log("tenPercentOfOldPrice: %s", tenPercentOfOldPrice);
         if (_newPrice > maxPrice) revert FestivalTicketMarketPlace__NewPriceNotMoreThan10Percent();
         _;
     }
@@ -96,12 +99,9 @@ contract FestivalTicketMarketPlace is Ownable {
     function buyTicket() external payable returns (uint256 ticketId){
         if (ticketSold >= maxTickets) revert FestivalTicketMarketPlace__NoMoreTicketsAvailable();
         if (msg.value != ticketPrice) revert FestivalTicketMarketPlace__NotSufficientAmount();
-        console.log("msg.sender", msg.sender);
-        console.log("owner", contractOwner);
-        console.log("address(this)", address(this));
-        bool isTransferSuccessful = festivalCurrencyTicket.transferFrom(msg.sender, address(this), 1);
+        uint256 ticketToTransfer = 1;
+        bool isTransferSuccessful = festivalCurrencyTicket.transferFrom(address(this), msg.sender , ticketToTransfer);
         if (!isTransferSuccessful) revert FestivalTicketMarketPlace__TokenTransferFailed();        
-
         ticketId = ticketSold + 1;
         ticketSold++;
         ticketPriceByTicketId[ticketId] = ticketPrice;

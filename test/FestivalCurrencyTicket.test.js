@@ -31,7 +31,7 @@ const { developmentChains, networkConfig } = require("../helper-hardhat-config")
             });
             it("Should set the right total ticket", async function () {
                 const totalSupply = await festivalCurrencyTicket.totalSupply();
-                assert.equal(totalSupply, totalTicket * 10 ** 18);
+                assert.equal(totalSupply, totalTicket);
             });
         });
     })
