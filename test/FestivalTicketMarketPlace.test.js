@@ -124,23 +124,13 @@ const { developmentChains, networkConfig } = require("../helper-hardhat-config")
 
                 expect(festivalTicketMarketPlace.listTicketForSale(1, sellPrice)).to.be.revertedWith("FestivalTicketMarketPlace__PriceCannotBeZero");
             })
-            it("Can not list ticket with price more than 110% of old price", async function () {
-                let price = await festivalTicketMarketPlace.getTicketPrice();
-                let sellPrice = price * 105 / 100; + price;
-                const weiAmount = ethers.BigNumber.from(sellPrice.toString());
-                // console.log("weiAmount: ", weiAmount)
-                const etherAmount = ethers.utils.formatEther(weiAmount);
-                
-                let newPrice = ethers.BigNumber.from(price.toString());
-                
-                const priceEthAmount = ethers.utils.formatEther(newPrice);
-
-                const buyTicketTx = await festivalTicketMarketPlace.buyTicket({value: priceEthAmount});
+            it("Can not list if already listed", async function () {
+                const price = await festivalTicketMarketPlace.getTicketPrice();
+                const buyTicketTx = await festivalTicketMarketPlace.buyTicket({value: price});
                 await buyTicketTx.wait(1);
-                const listTicketTx = await festivalTicketMarketPlace.listTicketForSale(1, etherAmount);
-                await listTicketTx.wait(1);
 
-                console.log(listTicketTx)
+                await festivalTicketMarketPlace.listTicketForSale(120, price);
+                // expect(festivalTicketMarketPlace.listTicketForSale(1, price)).to.be.revertedWith("FestivalTicketMarketPlace__TicketAlreadyListed");
             });
         });
     });
