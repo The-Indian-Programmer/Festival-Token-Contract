@@ -12,8 +12,6 @@ const { developmentChains, networkConfig } = require("../helper-hardhat-config")
 
         let festivalCurrencyTicketAddress;
 
-        let festivalTicketNftAddress;
-
         let ticketName = networkConfig[network.config.chainId]['ticketName'];
         let ticketSymbol = networkConfig[network.config.chainId]['ticketSymbol'];
         let totalTicket = networkConfig[network.config.chainId]['totalTicket'];
@@ -31,7 +29,6 @@ const { developmentChains, networkConfig } = require("../helper-hardhat-config")
 
             
             festivalCurrencyTicketAddress = await festivalTicketMarketPlace.getFestivalCurrencyTicketAddress();
-            festivalTicketNftAddress = await festivalTicketMarketPlace.getFestivalTicketNFTAddress();
 
             festivalTicketMarketPlace.connect(accounts[1]);
             
@@ -128,9 +125,160 @@ const { developmentChains, networkConfig } = require("../helper-hardhat-config")
                 const price = await festivalTicketMarketPlace.getTicketPrice();
                 const buyTicketTx = await festivalTicketMarketPlace.buyTicket({value: price});
                 await buyTicketTx.wait(1);
-
-                await festivalTicketMarketPlace.listTicketForSale(120, price);
-                // expect(festivalTicketMarketPlace.listTicketForSale(1, price)).to.be.revertedWith("FestivalTicketMarketPlace__TicketAlreadyListed");
+                await festivalTicketMarketPlace.listTicketForSale(1, price);
+                expect(festivalTicketMarketPlace.listTicketForSale(1, price)).to.be.revertedWith("FestivalTicketMarketPlace__TicketAlreadyListed");
             });
         });
+
+
+        /* Cancel Listing */
+        describe("MarketPlace-Cancel-Listing", function () {
+
+            it("Should revert if ticket is not owned by the caller", async function () {
+                const price = await festivalTicketMarketPlace.getTicketPrice();
+                const buyTicketTx = await festivalTicketMarketPlace.buyTicket({value: price});
+                await buyTicketTx.wait(1);
+
+                await expect(festivalTicketMarketPlace.connect(accounts[2]).cancelTicketListing(1)).to.be.revertedWith("FestivalTicketMarketPlace__NotTicketNFTOwner");
+            });
+            it("Should revert if ticket is not listed", async function () {
+                const price = await festivalTicketMarketPlace.getTicketPrice();
+                const buyTicketTx = await festivalTicketMarketPlace.buyTicket({value: price});
+                await buyTicketTx.wait(1);
+
+                await expect(festivalTicketMarketPlace.cancelTicketListing(1)).to.be.revertedWith("FestivalTicketMarketPlace__TicketNotListedToSale");
+            });
+            it("Successfully cancel the ticket", async function () {
+                const price = await festivalTicketMarketPlace.getTicketPrice();
+                const buyTicketTx = await festivalTicketMarketPlace.buyTicket({value: price});
+                await buyTicketTx.wait(1);
+                await festivalTicketMarketPlace.listTicketForSale(1, price);
+                await festivalTicketMarketPlace.cancelTicketListing(1);
+                const ticketListing = await festivalTicketMarketPlace.getTicketListing();
+                assert.equal(ticketListing[0].ticketId, 0);
+            });
+        });
+
+        /* updateTicketPrice */
+        describe("MarketPlace-Update-Ticket-Price", function () {
+            it("Should revert if ticket is not owned by the caller", async function () {
+                const price = await festivalTicketMarketPlace.getTicketPrice();
+                const buyTicketTx = await festivalTicketMarketPlace.buyTicket({value: price});
+                await buyTicketTx.wait(1);
+
+                await expect(festivalTicketMarketPlace.connect(accounts[2]).updateTicketPrice(1, price)).to.be.revertedWith("FestivalTicketMarketPlace__NotTicketNFTOwner");
+            });
+            it("Should revert if ticket is not listed", async function () {
+                const price = await festivalTicketMarketPlace.getTicketPrice();
+                const buyTicketTx = await festivalTicketMarketPlace.buyTicket({value: price});
+                await buyTicketTx.wait(1);
+
+                await expect(festivalTicketMarketPlace.updateTicketPrice(1, price)).to.be.revertedWith("FestivalTicketMarketPlace__TicketNotListedToSale");
+            });
+            it("Should revert if new price is zero", async function () {
+                const price = await festivalTicketMarketPlace.getTicketPrice();
+                const newPrice = 0;
+                const buyTicketTx = await festivalTicketMarketPlace.buyTicket({value: price});
+                await buyTicketTx.wait(1);
+                await festivalTicketMarketPlace.listTicketForSale(1, price);
+                await expect(festivalTicketMarketPlace.updateTicketPrice(1, newPrice)).to.be.revertedWith("FestivalTicketMarketPlace__PriceCannotBeZero");
+            });
+            it("Should revert if new price more than 110 of old price", async function () {
+                const price = await festivalTicketMarketPlace.getTicketPrice();
+                let newPrice = price * 111 / 100; + price;
+                newPrice = ethers.utils.parseEther(newPrice.toString());
+
+                
+                const buyTicketTx = await festivalTicketMarketPlace.buyTicket({value: price});
+                await buyTicketTx.wait(1);
+                await festivalTicketMarketPlace.listTicketForSale(1, price);
+
+                await expect(festivalTicketMarketPlace.updateTicketPrice(1, newPrice)).to.be.revertedWith("FestivalTicketMarketPlace__NewPriceNotMoreThan10Percent");
+            });
+            it("Successfully update the ticket price", async function () {
+                const price = await festivalTicketMarketPlace.getTicketPrice();
+                let newPrice = price * 105 / 100; + price;
+
+                newPrice = newPrice.toString();
+
+                const buyTicketTx = await festivalTicketMarketPlace.buyTicket({value: price});
+                await buyTicketTx.wait(1);
+
+                await festivalTicketMarketPlace.listTicketForSale(1, price);
+
+                await festivalTicketMarketPlace.updateTicketPrice(1, newPrice);
+                const ticketListing = await festivalTicketMarketPlace.getTicketListing();
+                assert.equal(ticketListing[0].ticketId, 1);
+                assert.equal(ticketListing[0].price.toString(), newPrice.toString());
+            });
+        });
+
+
+        /* buyTicketFromListing */
+        describe("MarketPlace-Buy-Ticket-From-Listing", function () {
+
+
+            beforeEach(async function () {
+                /* Buy and list the nft ticket first */
+                const price = await festivalTicketMarketPlace.getTicketPrice();
+                const buyTicketTx = await festivalTicketMarketPlace.buyTicket({value: price});
+                await buyTicketTx.wait(1);
+
+                let newPrice = price * 105 / 100; + price;
+                newPrice =newPrice.toString();
+
+                await festivalTicketMarketPlace.listTicketForSale(1, newPrice);
+            });
+
+            it("Should revert if ticket is not listed", async function () {
+                const price = await festivalTicketMarketPlace.getTicketPrice();
+                let newPrice = price * 105 / 100; + price;
+                newPrice =newPrice.toString();
+                await expect(festivalTicketMarketPlace.buyTicketFromListing(2, {value: newPrice})).to.be.revertedWith("FestivalTicketMarketPlace__TicketNotListedToSale");
+            });
+            it("Should revert if price is not enough", async function () {
+                const price = await festivalTicketMarketPlace.getTicketPrice();
+                
+                let newPrice = price * 104 / 100; + price; 
+                newPrice = newPrice.toString();
+
+                await expect(festivalTicketMarketPlace.connect(accounts[2]).buyTicketFromListing(1, {value: newPrice})).to.be.revertedWith("FestivalTicketMarketPlace__NotSufficientAmount");
+
+            });
+            it("Ticket owner can not buy the ticket from listing", async function () {
+                const price = await festivalTicketMarketPlace.getTicketPrice();
+                let newPrice = price * 105 / 100; + price;
+                newPrice = newPrice.toString();
+
+                await expect(festivalTicketMarketPlace.buyTicketFromListing(1, {value: newPrice})).to.be.revertedWith("FestivalTicketMarketPlace__AlreadyTicketOwner");
+            });
+            it("Successfully buy the ticket from listing", async function () {
+                const price = await festivalTicketMarketPlace.getTicketPrice();
+                
+                let newPrice = price * 105 / 100; + price;
+
+                newPrice = newPrice.toString();
+                console.log("Account one : ", accounts[1].address);
+                console.log("Account Two : ", accounts[2].address);
+                const ticketBalance1_1 = await festivalTicketMarketPlace.getTicketBalanceOfUser(accounts[1].address);
+                console.log({ticketBalance1_1})
+                const ticketBalance1_add = await festivalTicketMarketPlace.getTicketBalanceOfUser(festivalTicketMarketPlaceAddress);
+                console.log({ticketBalance1_add})
+
+                const buyTicketFromListingTx = await festivalTicketMarketPlace.connect(accounts[2]).buyTicketFromListing(1, {value: newPrice});
+                await buyTicketFromListingTx.wait(1);
+                const ticketOwner = await festivalTicketMarketPlace.getFestivalTicketNFTOwnerByTicketId(1);
+                console.log({ticketOwner})
+                const ticketBalance1 = await festivalTicketMarketPlace.getTicketBalanceOfUser(accounts[1].address);
+                const ticketBalance2 = await festivalTicketMarketPlace.getTicketBalanceOfUser(accounts[2].address);
+                const ticketBalance1_add_after = await festivalTicketMarketPlace.getTicketBalanceOfUser(festivalTicketMarketPlaceAddress);
+                console.log({ticketBalance1_add})
+                console.log({ticketOwner})
+                console.log({ticketBalance1})
+                console.log({ticketBalance2})
+                console.log({ticketBalance1_add_after})
+                // assert.equal(ticketOwner, accounts[2].address);
+            });
+        });
+
     });

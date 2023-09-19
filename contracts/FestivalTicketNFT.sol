@@ -11,4 +11,9 @@ contract FestivalTicketNFT is ERC721, Ownable {
     function mintNFT(address to, uint256 _ticketId) external {
         _safeMint(to, _ticketId);
     }
+
+    /* Approve all the nfts to the marketplace */
+    function approveAll(address _to) external onlyOwner {
+        setApprovalForAll(_to, true);
+    }
 }

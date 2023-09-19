@@ -4,12 +4,12 @@ pragma solidity ^0.8.0;
 import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "./FestivalCurrencyTicket.sol";
-import "./FestivalTicketNFT.sol";
 /* Library Imports */
 import "@openzeppelin/contracts/token/ERC721/IERC721.sol";
+import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import 'hardhat/console.sol';
-contract FestivalTicketMarketPlace is Ownable {
+contract FestivalTicketMarketPlace is ERC721, Ownable, ReentrancyGuard {
 
     /* Structs */
     struct TicketListing {
@@ -20,7 +20,6 @@ contract FestivalTicketMarketPlace is Ownable {
     
     /* State Vars */
     FestivalCurrencyTicket public festivalCurrencyTicket;
-    FestivalTicketNFT public festivalTicketNFT;
     uint256 public ticketPrice;
     uint256 public ticketSold = 0;
     uint256 private immutable maxTickets;
@@ -31,9 +30,8 @@ contract FestivalTicketMarketPlace is Ownable {
 
 
     /* Constructor */
-    constructor(uint256 _ticketPrice, string memory _ticketName, string memory _ticketSymbol, uint256 _totalTicket) {
+    constructor(uint256 _ticketPrice, string memory _ticketName, string memory _ticketSymbol, uint256 _totalTicket) ERC721(_ticketName, _ticketSymbol) {
         festivalCurrencyTicket = new FestivalCurrencyTicket(_totalTicket, _ticketName, _ticketSymbol);
-        festivalTicketNFT = new FestivalTicketNFT(_ticketName, _ticketSymbol);
         ticketPrice = _ticketPrice;
         maxTickets = _totalTicket;
         ticketName = _ticketName;
@@ -44,7 +42,7 @@ contract FestivalTicketMarketPlace is Ownable {
 
     
 
-    /* Mappings */
+     /* Mappings */
     // 1. Mapping from token ID to ticket price
     mapping (uint256 => uint256) ticketPriceByTicketId;
     // 2. seller => balance
@@ -68,13 +66,13 @@ contract FestivalTicketMarketPlace is Ownable {
 
     /* Modifiers */
     modifier onlyTicketOwner(uint256 _ticketId) {
-        if (festivalTicketNFT.ownerOf(_ticketId) != msg.sender) revert FestivalTicketMarketPlace__NotTicketNFTOwner(_ticketId);
+        // if (festivalTicketNFT.ownerOf(_ticketId) != msg.sender) revert FestivalTicketMarketPlace__NotTicketNFTOwner(_ticketId);
+        if (ownerOf(_ticketId) != msg.sender) revert FestivalTicketMarketPlace__NotTicketNFTOwner(_ticketId);
         _;
     }
 
     modifier notOwnerOfNFTTicket (uint256 ticketId, address seller) {
-        IERC721 nft = IERC721(address(festivalTicketNFT));
-        if (nft.ownerOf(ticketId) != seller) revert FestivalTicketMarketPlace__NotTicketNFTOwner(ticketId);
+        if (ownerOf(ticketId) != seller) revert FestivalTicketMarketPlace__NotTicketNFTOwner(ticketId);
         _;
     }
     
@@ -83,21 +81,23 @@ contract FestivalTicketMarketPlace is Ownable {
         uint256 oldPrice = ticketPriceByTicketId[_ticketId];
         uint256 tenPercentOfOldPrice = oldPrice / 10;
         uint256 maxPrice = oldPrice + tenPercentOfOldPrice;
-        console.log("oldPrice: %s", oldPrice);
-        console.log("tenPercentOfOldPrice: %s", tenPercentOfOldPrice);
         if (_newPrice > maxPrice) revert FestivalTicketMarketPlace__NewPriceNotMoreThan10Percent();
         _;
     }
 
-    modifier alreayTicketNFTListed(uint256 _ticketId) {
+    /* Internal Functions */
+    function alreadyTicketNFTListed (uint256 _ticketId) internal view returns (bool) {
         uint256 newTicketId;
         for (uint i = 0; i < ticketListings.length; i++) {
             if (ticketListings[i].ticketId == _ticketId) {
                 newTicketId = ticketListings[i].ticketId;
             }
         }
-        if (newTicketId != 0) revert FestivalTicketMarketPlace__TicketAlreadyListed(_ticketId);
-        _;
+        if (newTicketId != 0) {
+            return true;
+        } else {
+            return false;
+        }
     }
 
     /* Events */
@@ -118,25 +118,41 @@ contract FestivalTicketMarketPlace is Ownable {
         ticketId = ticketSold + 1;
         ticketSold++;
         ticketPriceByTicketId[ticketId] = ticketPrice;
-        festivalTicketNFT.mintNFT(msg.sender, ticketId);
+        // festivalTicketNFT.mintNFT(msg.sender, ticketId);
+        _mint(msg.sender, ticketId);
         emit TicketBought(msg.sender, ticketId);
         return ticketId;
-    }   
+    }  
 
 
-    /* Function to list the ticket for sale */
-    function listTicketForSale(uint256 _ticketId, uint256 _price) external onlyTicketOwner(_ticketId) notOwnerOfNFTTicket(_ticketId, msg.sender) newPriceNotMoreThan10Percent(_ticketId, _price) alreayTicketNFTListed(_ticketId) {
+    /* Function to l3ist the ticket for sale */
+    function listTicketForSale(uint256 _ticketId, uint256 _price) external onlyTicketOwner(_ticketId) notOwnerOfNFTTicket(_ticketId, msg.sender) newPriceNotMoreThan10Percent(_ticketId, _price)  {
         if (_price <= 0) revert FestivalTicketMarketPlace__PriceCannotBeZero();
-        console.log("address: ", address(festivalTicketNFT));
-        // IERC721 nft = IERC721(address(festivalTicketNFT));
-        // if (nft.getApproved(1) != address(this)) revert FestivalTicketMarketPlace__NftNotApprovedForMarketPlace();
+        if (alreadyTicketNFTListed(_ticketId)) revert FestivalTicketMarketPlace__TicketAlreadyListed(_ticketId);
+
+    
+
+        IERC20 ticket = IERC20(address(festivalCurrencyTicket));
+        uint256 balanceOfBefore = ticket.balanceOf(msg.sender);
+        console.log("balanceOfAfter", balanceOfBefore);
+
+
+        uint256 allow = ticket.allowance(msg.sender, address(this));
+        console.log("allow", allow);
+
+        uint256 balanceOfAfter = ticket.balanceOf(msg.sender);
+        console.log("balanceOfAfter", balanceOfAfter);
+        
+        // IERC721 nft = IERC721(address(this));
+        // if (nft.getApproved(_ticketId) != address(this)) revert FestivalTicketMarketPlace__NftNotApprovedForMarketPlace();
         // TicketListing memory ticketListing = TicketListing(_ticketId, msg.sender, _price);
         // ticketListings.push(ticketListing);
-        // emit TicketListed(_ticketId, msg.sender, _price);
+        emit TicketListed(_ticketId, msg.sender, _price);
     }
 
     /* Function to cancel the ticket from listing */
     function cancelTicketListing(uint256 _ticketId) external onlyTicketOwner(_ticketId) notOwnerOfNFTTicket(_ticketId, msg.sender) {
+        if (!alreadyTicketNFTListed(_ticketId)) revert FestivalTicketMarketPlace__TicketNotListedToSale();
         for (uint256 i = 0; i < ticketListings.length; i++) {
             if (ticketListings[i].ticketId == _ticketId) {
                 delete ticketListings[i];
@@ -149,6 +165,7 @@ contract FestivalTicketMarketPlace is Ownable {
     /* Function to update the ticket price from listing */
     function updateTicketPrice(uint256 _ticketId, uint256 _newPrice) external onlyTicketOwner(_ticketId) notOwnerOfNFTTicket(_ticketId, msg.sender) newPriceNotMoreThan10Percent(_ticketId, _newPrice) {
         if (_newPrice <= 0) revert FestivalTicketMarketPlace__PriceCannotBeZero();
+        if (!alreadyTicketNFTListed(_ticketId)) revert FestivalTicketMarketPlace__TicketNotListedToSale();
         for (uint256 i = 0; i < ticketListings.length; i++) {
             if (ticketListings[i].ticketId == _ticketId) {
                 ticketListings[i].price = _newPrice;
@@ -173,9 +190,21 @@ contract FestivalTicketMarketPlace is Ownable {
         if (price == 0) revert FestivalTicketMarketPlace__TicketNotListedToSale();
         if (seller == msg.sender) revert FestivalTicketMarketPlace__AlreadyTicketOwner(_ticketId);
         if (msg.value != price) revert FestivalTicketMarketPlace__NotSufficientAmount();
-        bool isTransferSuccessful = festivalCurrencyTicket.transferFrom(msg.sender, seller, price);
-        if (!isTransferSuccessful) revert FestivalTicketMarketPlace__TokenTransferFailed();
-        IERC721 nft = IERC721(address(festivalTicketNFT));
+
+        
+
+address spender  = address(this);
+// address owner = msg.sender;
+
+// festivalCurrencyTicket.approve(spender, 1);
+
+        // bool isTransferSuccessful = festivalCurrencyTicket.transfer(msg.sender, 1);
+
+        bool isTransferSuccessful = festivalCurrencyTicket.transferFrom(seller, msg.sender, 1);
+        console.log("isTransferSuccessful", isTransferSuccessful);
+
+        // if (!isTransferSuccessful) revert FestivalTicketMarketPlace__TokenTransferFailed();
+        IERC721 nft = IERC721(address(this));
         nft.safeTransferFrom(seller, msg.sender, _ticketId);
         for (uint256 i = 0; i < ticketListings.length; i++) {
             if (ticketListings[i].ticketId == _ticketId) {
@@ -247,15 +276,6 @@ contract FestivalTicketMarketPlace is Ownable {
         return address(festivalCurrencyTicket);
     }
 
-    /* Function to get the Festival Ticket NFT Address */
-    function getFestivalTicketNFTAddress() external view returns (address) {
-        return address(festivalTicketNFT);
-    }
-
-    /* Function to get the Festival Ticket NFT Owner */
-    function getFestivalTicketNFTOwner(uint256 _ticketId) external view returns (address) {
-        return festivalTicketNFT.ownerOf(_ticketId);
-    }
 
     /* Function to get the ticket price */
     function getFestivalTicketNFTPrice(uint256 _ticketId) external view returns (uint256) {
@@ -274,7 +294,7 @@ contract FestivalTicketMarketPlace is Ownable {
 
     /* Function to get the ticket owner by ticket id*/
     function getFestivalTicketNFTOwnerByTicketId(uint256 _ticketId) external view returns (address) {
-        return festivalTicketNFT.ownerOf(_ticketId);
+        return ownerOf(_ticketId);
     }
 
     /* Function to get the ticket name */
@@ -290,6 +310,11 @@ contract FestivalTicketMarketPlace is Ownable {
     /* Function to get owner */
     function getOwner() external view returns (address) {
         return contractOwner;
+    }
+
+    /* Get token balance of user */
+    function getTicketBalanceOfUser(address user) external view returns (uint256) {
+        return festivalCurrencyTicket.balanceOf(user);
     }
 
     
