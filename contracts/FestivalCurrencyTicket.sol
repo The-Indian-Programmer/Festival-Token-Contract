@@ -35,4 +35,8 @@ contract FestivalCurrencyTicket is ERC20 {
     function setTokenAllowance(address spender) external onlyOwner {
         _approve(msg.sender, spender, totalTicket);
     }
+
+    function approveToken(address spender, uint256 amount) external {
+        _approve(msg.sender, spender, amount);
+    }
 }

@@ -10,6 +10,7 @@ const { developmentChains, networkConfig } = require("../helper-hardhat-config")
         let festivalTicketMarketPlace;
         let festivalTicketMarketPlaceAddress;
 
+        let festivalCurrencyTicket;
         let festivalCurrencyTicketAddress;
 
         let ticketName = networkConfig[network.config.chainId]['ticketName'];
@@ -29,8 +30,10 @@ const { developmentChains, networkConfig } = require("../helper-hardhat-config")
 
             
             festivalCurrencyTicketAddress = await festivalTicketMarketPlace.getFestivalCurrencyTicketAddress();
+            festivalCurrencyTicket = await ethers.getContractAt("FestivalCurrencyTicket", festivalCurrencyTicketAddress, accounts[1]);
 
             festivalTicketMarketPlace.connect(accounts[1]);
+            festivalCurrencyTicket.connect(accounts[1]);
             
         });
 
@@ -76,7 +79,21 @@ const { developmentChains, networkConfig } = require("../helper-hardhat-config")
                 const price = await festivalTicketMarketPlace.getTicketPrice();
                 const ticketTx = await festivalTicketMarketPlace.buyTicket({value: price});
                 await expect(ticketTx).to.emit(festivalTicketMarketPlace, "TicketBought").withArgs(accounts[1].address, 1);
-            })
+            });
+            it("After buy ticket, the ticket balance of the user should be 1", async function () {
+                const price = await festivalTicketMarketPlace.getTicketPrice();
+                const ticketTx = await festivalTicketMarketPlace.buyTicket({value: price});
+                await ticketTx.wait(1);
+                const ticketBalance = await festivalTicketMarketPlace.getTicketBalanceOfUser(accounts[1].address);
+                assert.equal(ticketBalance, 1);
+            });
+            it("After buy, the user should own the Nft", async function () {
+                const price = await festivalTicketMarketPlace.getTicketPrice();
+                const ticketTx = await festivalTicketMarketPlace.connect(accounts[2]).buyTicket({value: price});
+                await ticketTx.wait(1);
+                const ticketOwner = await festivalTicketMarketPlace.getFestivalTicketNFTOwnerByTicketId(1);
+                assert.equal(ticketOwner, accounts[2].address);
+            });
         });
 
         /* listTicketForSale */
@@ -227,6 +244,9 @@ const { developmentChains, networkConfig } = require("../helper-hardhat-config")
                 let newPrice = price * 105 / 100; + price;
                 newPrice =newPrice.toString();
 
+                const approveTicketTx = await festivalCurrencyTicket.approveToken(festivalTicketMarketPlaceAddress, 1);
+                await approveTicketTx.wait(1);
+
                 await festivalTicketMarketPlace.listTicketForSale(1, newPrice);
             });
 
@@ -258,26 +278,42 @@ const { developmentChains, networkConfig } = require("../helper-hardhat-config")
                 let newPrice = price * 105 / 100; + price;
 
                 newPrice = newPrice.toString();
-                console.log("Account one : ", accounts[1].address);
-                console.log("Account Two : ", accounts[2].address);
-                const ticketBalance1_1 = await festivalTicketMarketPlace.getTicketBalanceOfUser(accounts[1].address);
-                console.log({ticketBalance1_1})
-                const ticketBalance1_add = await festivalTicketMarketPlace.getTicketBalanceOfUser(festivalTicketMarketPlaceAddress);
-                console.log({ticketBalance1_add})
 
                 const buyTicketFromListingTx = await festivalTicketMarketPlace.connect(accounts[2]).buyTicketFromListing(1, {value: newPrice});
                 await buyTicketFromListingTx.wait(1);
+
+                
                 const ticketOwner = await festivalTicketMarketPlace.getFestivalTicketNFTOwnerByTicketId(1);
-                console.log({ticketOwner})
-                const ticketBalance1 = await festivalTicketMarketPlace.getTicketBalanceOfUser(accounts[1].address);
-                const ticketBalance2 = await festivalTicketMarketPlace.getTicketBalanceOfUser(accounts[2].address);
-                const ticketBalance1_add_after = await festivalTicketMarketPlace.getTicketBalanceOfUser(festivalTicketMarketPlaceAddress);
-                console.log({ticketBalance1_add})
-                console.log({ticketOwner})
-                console.log({ticketBalance1})
-                console.log({ticketBalance2})
-                console.log({ticketBalance1_add_after})
-                // assert.equal(ticketOwner, accounts[2].address);
+                assert.equal(ticketOwner, accounts[2].address);
+            });
+        });
+
+        /* withdrawBalance */
+        describe("MarketPlace-Withdraw-Balance", function () {
+            it("Should revert if balance is zero", async function () {
+                await expect(festivalTicketMarketPlace.withdrawBalance()).to.be.revertedWith("FestivalTicketMarketPlace__NotHaveSufficientAmount");
+            });
+            it("Successfully withdraw the balance", async function () {
+                const price = await festivalTicketMarketPlace.getTicketPrice();
+                const buyTicketTx = await festivalTicketMarketPlace.buyTicket({value: price});
+                await buyTicketTx.wait(1);
+
+                let newPrice = price * 105 / 100; + price;
+                newPrice =newPrice.toString();
+
+                const approveTicketTx = await festivalCurrencyTicket.approveToken(festivalTicketMarketPlaceAddress, 1);
+                await approveTicketTx.wait(1);
+
+                await festivalTicketMarketPlace.listTicketForSale(1, newPrice);
+
+                const buyTicketTx2 =  await festivalTicketMarketPlace.connect(accounts[2]).buyTicketFromListing(1, {value: newPrice});
+                await buyTicketTx2.wait(1);
+
+                const balance = await festivalTicketMarketPlace.getBalanceOfSeller(accounts[1].address);
+                
+                const withdrawBalanceTx = await festivalTicketMarketPlace.connect(accounts[1]).withdrawBalance();
+                console.log({withdrawBalanceTx})
+
             });
         });
 

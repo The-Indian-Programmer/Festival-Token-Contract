@@ -119,7 +119,7 @@ contract FestivalTicketMarketPlace is ERC721, Ownable, ReentrancyGuard {
         ticketSold++;
         ticketPriceByTicketId[ticketId] = ticketPrice;
         // festivalTicketNFT.mintNFT(msg.sender, ticketId);
-        _mint(msg.sender, ticketId);
+        _safeMint(msg.sender, ticketId);
         emit TicketBought(msg.sender, ticketId);
         return ticketId;
     }  
@@ -130,23 +130,13 @@ contract FestivalTicketMarketPlace is ERC721, Ownable, ReentrancyGuard {
         if (_price <= 0) revert FestivalTicketMarketPlace__PriceCannotBeZero();
         if (alreadyTicketNFTListed(_ticketId)) revert FestivalTicketMarketPlace__TicketAlreadyListed(_ticketId);
 
-    
-
-        IERC20 ticket = IERC20(address(festivalCurrencyTicket));
-        uint256 balanceOfBefore = ticket.balanceOf(msg.sender);
-        console.log("balanceOfAfter", balanceOfBefore);
-
-
-        uint256 allow = ticket.allowance(msg.sender, address(this));
-        console.log("allow", allow);
-
-        uint256 balanceOfAfter = ticket.balanceOf(msg.sender);
-        console.log("balanceOfAfter", balanceOfAfter);
+        approve(address(this), _ticketId);
         
-        // IERC721 nft = IERC721(address(this));
-        // if (nft.getApproved(_ticketId) != address(this)) revert FestivalTicketMarketPlace__NftNotApprovedForMarketPlace();
-        // TicketListing memory ticketListing = TicketListing(_ticketId, msg.sender, _price);
-        // ticketListings.push(ticketListing);
+        IERC721 nft = IERC721(address(this));
+
+        if (nft.getApproved(_ticketId) != address(this)) revert FestivalTicketMarketPlace__NftNotApprovedForMarketPlace();
+        TicketListing memory ticketListing = TicketListing(_ticketId, msg.sender, _price);
+        ticketListings.push(ticketListing);
         emit TicketListed(_ticketId, msg.sender, _price);
     }
 
@@ -191,19 +181,9 @@ contract FestivalTicketMarketPlace is ERC721, Ownable, ReentrancyGuard {
         if (seller == msg.sender) revert FestivalTicketMarketPlace__AlreadyTicketOwner(_ticketId);
         if (msg.value != price) revert FestivalTicketMarketPlace__NotSufficientAmount();
 
-        
-
-address spender  = address(this);
-// address owner = msg.sender;
-
-// festivalCurrencyTicket.approve(spender, 1);
-
-        // bool isTransferSuccessful = festivalCurrencyTicket.transfer(msg.sender, 1);
-
         bool isTransferSuccessful = festivalCurrencyTicket.transferFrom(seller, msg.sender, 1);
-        console.log("isTransferSuccessful", isTransferSuccessful);
 
-        // if (!isTransferSuccessful) revert FestivalTicketMarketPlace__TokenTransferFailed();
+        if (!isTransferSuccessful) revert FestivalTicketMarketPlace__TokenTransferFailed();
         IERC721 nft = IERC721(address(this));
         nft.safeTransferFrom(seller, msg.sender, _ticketId);
         for (uint256 i = 0; i < ticketListings.length; i++) {
