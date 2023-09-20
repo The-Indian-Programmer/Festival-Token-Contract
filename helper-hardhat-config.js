@@ -34,11 +34,21 @@ const frontEndTicketAbiFile = "../frontend/src/constants/contractAbi/festivalTic
 const frontEndMarketPlaceContractsFile = "../frontend/src/constants/contractAddress/festivalTIcketMarketPlaceAddresses.json"
 const frontEndMarketPlaceAbiFile = "../frontend/src/constants/contractAbi/festivalTicketMarketPlace.json"
 
+const backEndTicketContractsFile = "../backend/contract-info/constants/contractAddress/festivalTIcketAddresses.json"
+const backEndTicketAbiFile = "../backend/contract-info/constants/contractAbi/festivalTicketAbi.json"
+
+const backEndMarketPlaceContractsFile = "../backend/contract-info/constants/contractAddress/festivalTIcketMarketPlaceAddresses.json"
+const backEndMarketPlaceAbiFile = "../backend/contract-info/constants/contractAbi/festivalTicketMarketPlace.json"
+
 module.exports = {
     networkConfig,
     developmentChains,
     frontEndTicketContractsFile,
     frontEndTicketAbiFile,
     frontEndMarketPlaceContractsFile,
-    frontEndMarketPlaceAbiFile
+    frontEndMarketPlaceAbiFile,
+    backEndTicketContractsFile,
+    backEndTicketAbiFile,
+    backEndMarketPlaceContractsFile,
+    backEndMarketPlaceAbiFile
 }

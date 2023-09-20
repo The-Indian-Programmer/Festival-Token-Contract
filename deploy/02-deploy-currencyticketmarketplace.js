@@ -26,8 +26,9 @@ module.exports = async ({ getNamedAccounts, deployments }) => {
         from: deployer,
         args,
         log: true,
-        waitConfirmations: network.config.blockConfirmations || 1,
+        waitConfirmations: 6,
     });
+
 
 
     if (!developmentChains.includes(network.name) && process.env.ETHERSCAN_API_KEY) {
@@ -35,6 +36,10 @@ module.exports = async ({ getNamedAccounts, deployments }) => {
     }
 
     log(`FestivalTicketMarketPlace deployed at ${festivalTicketMarketPlace.address}`);
+
+    // const updateCount = await festivalTicketMarketPlace.updateCounter();
+    // updateCount.wait(1);
+    // console.log("updateCounter", updateCount);
 }
 
 module.exports.tags = ["all", "NftMarketplace"];

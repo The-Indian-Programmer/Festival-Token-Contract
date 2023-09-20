@@ -27,6 +27,7 @@ contract FestivalTicketMarketPlace is ERC721, Ownable, ReentrancyGuard {
     string private ticketSymbol;
     TicketListing[] public ticketListings;
     address private contractOwner;
+    uint256 public counter = 0;
 
 
     /* Constructor */
@@ -101,12 +102,12 @@ contract FestivalTicketMarketPlace is ERC721, Ownable, ReentrancyGuard {
     }
 
     /* Events */
-    event TicketBought(address indexed buyer, uint256 indexed ticketId);
+    event TicketBought(address indexed buyer, uint256 indexed ticketId, uint256 amount);
     event TicketListed(uint256 indexed ticketId, address indexed seller, uint256 price);
     event TicketRemoved(uint256 indexed ticketId, address indexed seller, uint256 price);
     event TicketUpdated(uint256 indexed ticketId, address indexed seller, uint256 price);
     event AmountWithDrawn(address indexed seller, uint256 amount);
-
+    event Log(string message, uint256 value);
     
 
     function buyTicket() external payable returns (uint256 ticketId){
@@ -120,7 +121,7 @@ contract FestivalTicketMarketPlace is ERC721, Ownable, ReentrancyGuard {
         ticketPriceByTicketId[ticketId] = ticketPrice;
         // festivalTicketNFT.mintNFT(msg.sender, ticketId);
         _safeMint(msg.sender, ticketId);
-        emit TicketBought(msg.sender, ticketId);
+        emit TicketBought(msg.sender, ticketId, msg.value);
         return ticketId;
     }  
 
@@ -193,7 +194,7 @@ contract FestivalTicketMarketPlace is ERC721, Ownable, ReentrancyGuard {
             }
         }
         s_balances[seller] += price;
-        emit TicketBought(msg.sender, _ticketId);
+        emit TicketBought(msg.sender, _ticketId, msg.value);
     }
 
 
@@ -207,6 +208,10 @@ contract FestivalTicketMarketPlace is ERC721, Ownable, ReentrancyGuard {
         if (!success) revert FestivalTicketMarketPlace__WithDrawFailed(msg.sender, amount);
         emit AmountWithDrawn(msg.sender, amount);
         return true;
+    }
+
+    function updateCounter() external payable {
+        emit Log("Counter", counter);
     }
 
     /* ------------------------------- Getter Functions ------------------------------- */
