@@ -28,9 +28,17 @@ const networkConfig = {
 
 
 const developmentChains = ['hardhat', 'localhost']
+const frontEndTicketContractsFile = "../frontend/src/constants/contractAddress/festivalTIcketAddresses.json"
+const frontEndTicketAbiFile = "../frontend/src/constants/contractAbi/festivalTicketAbi.json"
 
+const frontEndMarketPlaceContractsFile = "../frontend/src/constants/contractAddress/festivalTIcketMarketPlaceAddresses.json"
+const frontEndMarketPlaceAbiFile = "../frontend/src/constants/contractAbi/festivalTicketMarketPlace.json"
 
 module.exports = {
     networkConfig,
     developmentChains,
+    frontEndTicketContractsFile,
+    frontEndTicketAbiFile,
+    frontEndMarketPlaceContractsFile,
+    frontEndMarketPlaceAbiFile
 }
