@@ -210,9 +210,7 @@ contract FestivalTicketMarketPlace is ERC721, Ownable, ReentrancyGuard {
         return true;
     }
 
-    function updateCounter() external payable {
-        emit Log("Counter", counter);
-    }
+
 
     /* ------------------------------- Getter Functions ------------------------------- */
     /* Function to get total sold tickets */

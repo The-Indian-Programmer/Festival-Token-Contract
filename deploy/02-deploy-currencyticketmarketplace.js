@@ -42,4 +42,4 @@ module.exports = async ({ getNamedAccounts, deployments }) => {
     // console.log("updateCounter", updateCount);
 }
 
-module.exports.tags = ["all", "NftMarketplace"];
+module.exports.tags = ["all", "nft"];

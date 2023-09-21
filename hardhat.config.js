@@ -41,8 +41,6 @@ module.exports = {
       chainId: 1337,
       url: LOCALHOST_RPC_URL,
       accounts: [LOCALHOST_PRIVATE_KEY],
-      gas: 2300000,
-      gasPrice: 8000000000,
     },
     "sepolia": {
       chainId: 11155111,

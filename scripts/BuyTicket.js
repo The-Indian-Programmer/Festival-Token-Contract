@@ -1,25 +1,23 @@
 const { network, ethers, getNamedAccounts, deployments } = require("hardhat");
 
 async function main() {
-    console.log("network", network.name);
     const {deployer} = await getNamedAccounts();
-    console.log("deployer",deployer);
     
     let accounts = await ethers.getSigners();
-    console.log("accounts", accounts[0].address);
     
-    // await deployments.fixture(["all"]);
 
-    let festivalTicketMarketPlaceAddress = '0x10E0EE6fd9800aF34c5524736b44c26B713adbA8'
-    console.log("festivalTicketMarketPlaceAddress", festivalTicketMarketPlaceAddress);
+    let festivalTicketMarketPlaceAddress = (await deployments.get("FestivalTicketMarketPlace")).address;
 
     let festivalTicketMarketPlace = await ethers.getContractAt("FestivalTicketMarketPlace", festivalTicketMarketPlaceAddress, accounts[1]);
   
-    console.log("Before updateCounter");
-    let updateCount = await festivalTicketMarketPlace.connect(accounts[0]).updateCounter({ gasLimit: 3000000, value: ethers.utils.parseEther("0.1") });
-    updateCount.wait(1);
-    console.log("updateCounter", updateCount);
-    console.log("After updateCounter");
+    let buyTicket = await festivalTicketMarketPlace.connect(accounts[0]).buyTicket({ gasLimit: 3000000, value: ethers.utils.parseEther("0.1") });
+    buyTicket.wait(1);
+    console.log("buyTicket", buyTicket);
+
+    const tokenBalance = await festivalTicketMarketPlace.connect(accounts[0]).getTicketBalanceOfUser(accounts[0].address);
+
+    console.log("tokenBalance", tokenBalance.toString());
+    console.log("accounts[0].address", accounts[0].address);
 }
 
 main()
