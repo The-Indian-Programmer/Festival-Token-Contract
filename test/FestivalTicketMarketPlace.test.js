@@ -34,6 +34,7 @@ const { developmentChains, networkConfig } = require("../helper-hardhat-config")
 
             festivalTicketMarketPlace.connect(accounts[1]);
             festivalCurrencyTicket.connect(accounts[1]);
+
             
         });
 
@@ -237,9 +238,11 @@ const { developmentChains, networkConfig } = require("../helper-hardhat-config")
 
             beforeEach(async function () {
                 /* Buy and list the nft ticket first */
+                console.log("=============================================================")
                 const price = await festivalTicketMarketPlace.getTicketPrice();
                 const buyTicketTx = await festivalTicketMarketPlace.buyTicket({value: price});
                 await buyTicketTx.wait(1);
+                console.log("Ticket Owner: ", accounts[1].address)
 
                 let newPrice = price * 105 / 100; + price;
                 newPrice =newPrice.toString();
@@ -274,16 +277,26 @@ const { developmentChains, networkConfig } = require("../helper-hardhat-config")
             });
             it("Successfully buy the ticket from listing", async function () {
                 const price = await festivalTicketMarketPlace.getTicketPrice();
+                console.log("MarketPlace Address: ", festivalTicketMarketPlaceAddress)
+                console.log("Ticket Addresss: ", festivalCurrencyTicketAddress)
+                console.log("=============================================================")
+
+                console.log("Account one: ", accounts[1].address)
+                console.log("Account two: ", accounts[2].address)
+                
                 
                 let newPrice = price * 105 / 100; + price;
 
                 newPrice = newPrice.toString();
 
+                const ticketOwnerBefore = await festivalTicketMarketPlace.getFestivalTicketNFTOwnerByTicketId(1);
+                console.log("Ticket Owner Before: ", ticketOwnerBefore)
                 const buyTicketFromListingTx = await festivalTicketMarketPlace.connect(accounts[2]).buyTicketFromListing(1, {value: newPrice});
                 await buyTicketFromListingTx.wait(1);
 
                 
                 const ticketOwner = await festivalTicketMarketPlace.getFestivalTicketNFTOwnerByTicketId(1);
+                console.log("Ticket Owner After: ", ticketOwner)
                 assert.equal(ticketOwner, accounts[2].address);
             });
         });

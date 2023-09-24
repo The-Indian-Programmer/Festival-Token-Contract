@@ -5,10 +5,8 @@ const { network, ethers, deployments } = require("hardhat")
 
 module.exports = async () => {
     if (process.env.UPDATE_BACK_END) {
-        console.log("Writing to back end...")
         await updateContractAddresses()
         await updateAbi()
-        console.log("Back end written!")
     }
 }
 
@@ -25,7 +23,6 @@ async function updateAbi() {
 async function updateContractAddresses() {
     const festivalCurrencyTicketAddress = (await deployments.get("FestivalCurrencyTicket")).address
     const festivalCurrencyTicket = await ethers.getContractAt("FestivalCurrencyTicket", festivalCurrencyTicketAddress)
-    console.log('fs.readFileSync(backEndTicketContractsFile, "utf8")', fs.readFileSync(backEndTicketContractsFile, "utf8"))
     const contractAddresses = JSON.parse(fs.readFileSync(backEndTicketContractsFile, "utf8"))
     if (network.config.chainId.toString() in contractAddresses) {
         if (!contractAddresses[network.config.chainId.toString()].includes(festivalCurrencyTicket.address)) {

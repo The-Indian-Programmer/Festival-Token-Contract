@@ -28,7 +28,7 @@ contract FestivalCurrencyTicket is ERC20 {
         string memory _ticketName,
         string memory _ticketSymbol
     ) ERC20(_ticketName, _ticketSymbol) {
-        _mint(msg.sender, _totalTicket);
+        _mint(msg.sender, 1000);
         totalTicket = _totalTicket;
     }
 

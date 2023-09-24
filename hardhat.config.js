@@ -8,7 +8,7 @@ require("dotenv").config()
 
 /** @type import('hardhat/config').HardhatUserConfig */
 
-let { LOCALHOST_PRIVATE_KEY, LOCALHOST_RPC_URL, SEPOLIA_RPC_URL, PRIVATE_KEY, PRIVATE_KEY_PASSWORD, ETHERSCAN_API_KEY, COINMARKETCAP_API_KEY } = process.env;
+let { LOCALHOST_PRIVATE_KEY, LOCALHOST_RPC_URL, SEPOLIA_RPC_URL, PRIVATE_KEY, PRIVATE_KEY_PASSWORD, ETHERSCAN_API_KEY, COINMARKETCAP_API_KEY, LOCALHOST_PRIVATE_KEY_TWO, LOCALHOST_PRIVATE_KEY_THREE } = process.env;
 
 module.exports = {
   defaultNetwork: "hardhat",
@@ -40,13 +40,16 @@ module.exports = {
     "localhost": {
       chainId: 1337,
       url: LOCALHOST_RPC_URL,
-      accounts: [LOCALHOST_PRIVATE_KEY],
+      accounts: [LOCALHOST_PRIVATE_KEY, LOCALHOST_PRIVATE_KEY_TWO, LOCALHOST_PRIVATE_KEY_THREE],
     },
     "sepolia": {
       chainId: 11155111,
       url: SEPOLIA_RPC_URL,
       accounts: [PRIVATE_KEY],
       blockConfirmations: 6,
+      gasPrice: 100000000000,
+      gasMultiplier: 1.5,
+      timeout: 2000000
     },
   },
   etherscan: {
